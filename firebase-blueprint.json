@@ -1,0 +1,102 @@
+{
+  "entities": {
+    "Project": {
+      "title": "Project",
+      "description": "A construction or contracting project.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "location": { "type": "string" },
+        "status": { "type": "string", "enum": ["planning", "active", "completed", "on-hold"] },
+        "budget": { "type": "number" },
+        "currency": { "type": "string" },
+        "startDate": { "type": "string", "format": "date-time" },
+        "endDate": { "type": "string", "format": "date-time" },
+        "managerId": { "type": "string" }
+      },
+      "required": ["name", "location", "status", "budget"]
+    },
+    "Milestone": {
+      "title": "Milestone",
+      "description": "A project milestone with billing details.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "title": { "type": "string" },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "in-progress", "completed", "paid"] },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "completionDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["projectId", "title", "amount", "status"]
+    },
+    "Staff": {
+      "title": "Field Staff",
+      "description": "Workers and field staff associated with projects.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "phone": { "type": "string" },
+        "dailyRate": { "type": "number" },
+        "currentProjectId": { "type": "string" }
+      },
+      "required": ["name", "role", "dailyRate"]
+    },
+    "Attendance": {
+      "title": "Attendance",
+      "description": "Daily attendance and shifts for staff.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "staffId": { "type": "string" },
+        "projectId": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "hoursWorked": { "type": "number" },
+        "overtime": { "type": "number" },
+        "allowance": { "type": "number", "description": "Regional difficulty allowance" },
+        "status": { "type": "string", "enum": ["draft", "approved", "processed"] }
+      },
+      "required": ["staffId", "projectId", "date", "hoursWorked"]
+    },
+    "Supplier": {
+      "title": "Local Supplier",
+      "description": "Suppliers for project materials.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "contact": { "type": "string" },
+        "paymentTerms": { "type": "string" },
+        "totalBalance": { "type": "number" }
+      },
+      "required": ["name", "category"]
+    }
+  },
+  "firestore": {
+    "/projects": {
+      "schema": "Project",
+      "description": "Collection of projects."
+    },
+    "/projects/{projectId}/milestones": {
+      "schema": "Milestone",
+      "description": "Milestones for a specific project."
+    },
+    "/staff": {
+      "schema": "Staff",
+      "description": "Central registry of field workers."
+    },
+    "/attendance": {
+      "schema": "Attendance",
+      "description": "Daily attendance logs."
+    },
+    "/suppliers": {
+      "schema": "Supplier",
+      "description": "Registry of local material suppliers."
+    }
+  }
+}

@@ -1,0 +1,109 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 0.1 Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Entity Validations
+
+    function isValidProject(data) {
+      return data.keys().hasAll(['name', 'location', 'status', 'budget']) &&
+             data.keys().size() >= 4 &&
+             data.name is string && data.name.size() <= 200 &&
+             data.location is string && data.location.size() <= 500 &&
+             data.status in ['planning', 'active', 'completed', 'on-hold'] &&
+             data.budget is number && data.budget >= 0;
+    }
+
+    function isValidMilestone(data) {
+      return data.keys().hasAll(['projectId', 'title', 'amount', 'status']) &&
+             data.projectId is string &&
+             data.title is string && data.title.size() <= 200 &&
+             data.amount is number && data.amount >= 0 &&
+             data.status in ['pending', 'in-progress', 'completed', 'paid'];
+    }
+
+    function isValidStaff(data) {
+      return data.keys().hasAll(['name', 'role', 'dailyRate']) &&
+             data.name is string && data.name.size() <= 200 &&
+             data.role is string && data.role.size() <= 100 &&
+             data.dailyRate is number && data.dailyRate >= 0;
+    }
+
+    function isValidAttendance(data) {
+      return data.keys().hasAll(['staffId', 'projectId', 'date', 'hoursWorked']) &&
+             data.staffId is string &&
+             data.projectId is string &&
+             data.hoursWorked is number && data.hoursWorked >= 0 && data.hoursWorked <= 24;
+    }
+
+    // Match Blocks
+
+    match /projects/{projectId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isEmailVerified() && isValidProject(incoming());
+      allow update: if isEmailVerified() && isValidProject(incoming()) && (
+        // Only allow status and budget updates for contributors, or generic update for admin
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'budget', 'endDate', 'location'])
+      );
+      allow delete: if isEmailVerified(); // In a real app, check for managerId or role
+
+      match /milestones/{milestoneId} {
+        allow read: if isSignedIn();
+        allow create: if isEmailVerified() && isValidMilestone(incoming());
+        allow update: if isEmailVerified() && isValidMilestone(incoming()) &&
+                      incoming().diff(existing()).affectedKeys().hasAll(['status']) || incoming().diff(existing()).affectedKeys().hasOnly(['status', 'amount', 'dueDate']);
+        allow delete: if isEmailVerified();
+      }
+    }
+
+    match /staff/{staffId} {
+      allow read: if isSignedIn();
+      allow create: if isEmailVerified() && isValidStaff(incoming());
+      allow update: if isEmailVerified() && isValidStaff(incoming());
+      allow delete: if isEmailVerified();
+    }
+
+    match /attendance/{attendanceId} {
+      allow read: if isSignedIn();
+      allow create: if isEmailVerified() && isValidAttendance(incoming());
+      allow update: if isEmailVerified() && isValidAttendance(incoming());
+      allow delete: if isEmailVerified();
+    }
+
+    match /suppliers/{supplierId} {
+      allow read: if isSignedIn();
+      allow create: if isEmailVerified();
+      allow update: if isEmailVerified();
+      allow delete: if isEmailVerified();
+    }
+  }
+}
